@@ -43,9 +43,11 @@ Supported intents:
 - GET_TRACKER_BALANCE: parameters {{}}
 - ADD_EXPENSE: parameters {{ "title": string, "amount": float, "type": "expense"|"income", "category": string }}
 - GET_TRACKER_HABITS: parameters {{}}
+- LOG_HABIT: parameters {{ "title": string }}
 - GET_TRACKER_ACADEMICS: parameters {{}}
 - GET_TRACKER_CAREER: parameters {{}}
 - GET_TRACKER_WELLNESS: parameters {{}}
+- LOG_WELLNESS: parameters {{ "mood": "ecstatic"|"happy"|"calm"|"tired"|"anxious"|"stressed", "water_glasses": Optional int, "sleep_hours": Optional float, "reflection": Optional string }}
 - GET_TRACKERS_OVERVIEW: parameters {{}}
 - CLARIFY_REQUEST: requires_clarification=true, clarification_prompt="..."
 - UNSUPPORTED_REQUEST: speech_response="Friendly response to general conversation or greeting"

@@ -256,6 +256,107 @@ class IntentParser:
             )
 
         # 9. Personalized Life Trackers ---------------------------------------
+        # Add Expense or Income
+        expense_match = re.search(
+            r"\b(?:spent|paid|add expense|log expense|record expense)\s+(?:rs\.?|inr|₹)?\s*([0-9]+(?:\.[0-9]+)?)\s*(?:on|for)\s+(.+)",
+            lower,
+        )
+        income_match = re.search(
+            r"\b(?:earned|received|got income|add income|log income)\s+(?:rs\.?|inr|₹)?\s*([0-9]+(?:\.[0-9]+)?)\s*(?:from|for)?\s*(.+)",
+            lower,
+        )
+        if expense_match or income_match:
+            is_income = bool(income_match)
+            match = income_match if is_income else expense_match
+            amount = float(match.group(1))
+            title = match.group(2).strip().capitalize()
+            category = "food"
+            if any(w in title.lower() for w in ["uber", "taxi", "bus", "train", "metro", "fuel", "petrol", "transit", "auto"]):
+                category = "transport"
+            elif any(w in title.lower() for w in ["grocery", "groceries", "supermarket", "vegetable", "milk"]):
+                category = "groceries"
+            elif any(w in title.lower() for w in ["shirt", "shoes", "clothes", "amazon", "flipkart", "shopping"]):
+                category = "shopping"
+            elif any(w in title.lower() for w in ["electricity", "wifi", "broadband", "recharge", "bill", "rent"]):
+                category = "bills"
+            elif is_income:
+                category = "salary" if "salary" in title.lower() else "freelance"
+
+            return InterpretResponse(
+                intent=IntentType.ADD_EXPENSE,
+                confidence=0.96,
+                requires_clarification=False,
+                action_proposal=ActionProposal(
+                    action_type="ADD_EXPENSE",
+                    parameters={
+                        "title": title,
+                        "amount": amount,
+                        "type": "income" if is_income else "expense",
+                        "category": category,
+                    },
+                ),
+                speech_response=f"Logged {'income' if is_income else 'expense'} of ₹{amount:.2f} for '{title}'.",
+            )
+
+        # Log Daily Habit
+        habit_log_match = re.search(
+            r"\b(?:completed|finished|log habit|did my|done with)\s+(?:my\s+)?(?:habit\s+)?([a-zA-Z0-9\s]+?)(?:\s+habit)?$",
+            lower,
+        )
+        if habit_log_match and not is_create_cmd and any(w in lower for w in ["habit", "workout", "reading", "coding", "meditation", "gym", "study"]):
+            habit_name = habit_log_match.group(1).strip().capitalize()
+            return InterpretResponse(
+                intent=IntentType.LOG_HABIT,
+                confidence=0.95,
+                requires_clarification=False,
+                action_proposal=ActionProposal(
+                    action_type="LOG_HABIT",
+                    parameters={"title": habit_name},
+                ),
+                speech_response=f"Marking your '{habit_name}' habit as completed for today! Keep up the momentum!",
+            )
+
+        # Log Wellness / Mood
+        wellness_match = re.search(
+            r"\b(?:log mood|feeling|felt|mood is|record mood|record wellness)\s+(?:as\s+)?([a-zA-Z]+)",
+            lower,
+        )
+        if wellness_match or (any(w in lower for w in ["drank", "water", "slept"]) and any(w in lower for w in ["glasses", "hours", "wellness"])):
+            mood = "calm"
+            if wellness_match:
+                raw_mood = wellness_match.group(1).lower()
+                for valid in ["ecstatic", "happy", "calm", "tired", "anxious", "stressed"]:
+                    if valid in raw_mood:
+                        mood = valid
+                        break
+                if raw_mood in ["good", "great", "awesome", "cheerful"]:
+                    mood = "happy"
+                elif raw_mood in ["sad", "depressed", "nervous", "worried"]:
+                    mood = "anxious"
+                elif raw_mood in ["exhausted", "sleepy"]:
+                    mood = "tired"
+
+            water_match = re.search(r"(\d+)\s*(?:glasses|glass|bottles)", lower)
+            water = int(water_match.group(1)) if water_match else None
+
+            sleep_match = re.search(r"(\d+(?:\.\d+)?)\s*(?:hours|hrs|hour)", lower)
+            sleep = float(sleep_match.group(1)) if sleep_match else None
+
+            return InterpretResponse(
+                intent=IntentType.LOG_WELLNESS,
+                confidence=0.95,
+                requires_clarification=False,
+                action_proposal=ActionProposal(
+                    action_type="LOG_WELLNESS",
+                    parameters={
+                        "mood": mood,
+                        "water_glasses": water,
+                        "sleep_hours": sleep,
+                    },
+                ),
+                speech_response=f"Recorded your mood as {mood.capitalize()}! Stay mindful and healthy.",
+            )
+
         if any(w in lower for w in ["account balance", "net balance", "my balance", "expense balance", "how much money", "how much spent", "how much did i spend", "expense tracker", "my expenses"]):
             return InterpretResponse(
                 intent=IntentType.GET_TRACKER_BALANCE,
